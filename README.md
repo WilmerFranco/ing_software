@@ -6,10 +6,10 @@ Proyecto Final carteras de topografia poligonales y nivelacion
 ## Integrantes
  Wilmer Franco Hernandez
 
- Jean peirre 
+ Jean Peirre Riaño
 
- Camilo
- 
+ Julian Camilo Lopez
+
  Juliana pachon 
  
 
