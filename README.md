@@ -5,9 +5,9 @@ Ingenieria Topografica
 Proyecto Final carteras de topografia poligonales y nivelacion
 ## Integrantes
  Wilmer Franco Hernandez
-jean peirre 
-camilo
-juliana pachon 
+ Jean peirre 
+ Camilo
+ Juliana pachon 
  
 
 
