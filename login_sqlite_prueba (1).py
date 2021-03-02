@@ -17,15 +17,6 @@ ventana['bg']=color		#Definimos nuestra ventana 'bg' con el valor 'color'
 
 Label(ventana,bg=color,text="Login",font=("Arial Black",16)).pack()	#Mostramos texto 'Login'
 
-#Abrir imagen para ventana principal
-'''imagen=Image.open("logo.png")						#Abrimos la imagen 'logo.png'
-imagen=imagen.resize((180,180),Image.ANTIALIAS)		#Redimensionamos la imagen a 180x180
-photoImg=ImageTk.PhotoImage(imagen)					#Le damos nombre a nuestra imagen redimensionada (photoImg)
-panel=tk.Label(ventana,image=photoImg).pack()		#Mostramos la imagen en nuestra ventana
-#Abrir imagen para ventana de registro
-img_reg=Image.open("logo2.jpg")						#Abrimos la imagen 'rak.jpg'
-img_reg=img_reg.resize((100,220),Image.ANTIALIAS)	#Redimensionamos la imagen
-photo_reg=ImageTk.PhotoImage(img_reg)'''				#Le damos nombre a nuestra imagen redimensionada (photo_reg)
 #Cajas de nuestra ventana Principal
 Label(ventana,text="Usuario : ",bg=color,font=("Arial Black",10)).pack()	#Texto 'Usuario:'
 caja1=Entry(ventana,font=("Arial",10))										#Creamos una caja de texto 'caja1'
@@ -118,6 +109,82 @@ if  eligio == "1":
     CalNiv=input("¿por cual método desea calcular?")
     if CalNiv == "1":
         print("Eligio calculo por distancias")
+	print()
+	print('='*173)
+	print()
+	print('{:^173}'.format('A J U S T E  D E  N I V E L A C I Ó N   P O R  D I S T A N C I A S'))
+	print()
+	print('='*173)
+	print()
+	BMS = int(input('Digite el número de BMS de la nivelación: '))
+	precisión = int(input('¿precisión del equipo [1 = 1mm] [0 = 2mm]: '))
+
+	#[AL DEFINIR PRECISIÓN CALCULA ERROR TEORICO PERMISIBLE DE LA NIVELACIÓN]
+	if precisión == 1:
+	    error_permitido = (BMS * 1)
+	else:
+	    error_permitido = (BMS * 2)
+	#[IMPRIME EL ERROR PERMITIDO DE ACUERDO CON LA PRECISIÓN DEL EQUIPO]
+	    print(f'el error permitido de acuerdo con precisión del equipo es: {error_permitido}')
+	#[SOLICITA LA COTA DEL BM DE PARTIDA]
+	BM = float(input('Digite la cota del BM de inicio: '))
+	VMAS_inicio = float(input('Digite la vista mas: '))
+
+	#[IMPRIME LA HI DE REFERENCIA]
+	hi_ref = (BM + VMAS_inicio)
+	print('\n', f'La ALTURA INSTRUMENTAL calculada es: {hi_ref}')
+	#[ALMACENA LOS DATOS CAPTURADOS EN LISTAS]
+	datos_medidos = []
+	datos_medidos.append (['BM','V+', 'V-', 'HI', 'DIST', 'COTA', 'COTA CORREG'])
+
+	j = 0
+	sumVMAS = 0.0
+	sumVMENOS = 0.0
+	sumdistafter = 0.0
+	sumdistnext = 0.0
+
+	#[SOLICITA LOS DATOS DE CADA BM, NOMBRE, VISTA +, VISTA - Y DISTANCIA]
+	# CON NUMERO DE BM´S Y DIST OBSERVADOS REALIZA LA SUMA DE ANGULOS
+	# CALCULA EL ERROR EN COTA Y LA CORRECCION 
+	# IMPRIME EL ERROR EN COTA
+	# IMPRIME LA CORRECCION EN COTA
+
+	for BM in (range(BMS + 1)):
+	    print('='*80)
+
+	    nombre_BM_atras = input(f'Digite el nombre del BM {BM+1}: ')
+	    vistaMas = float(input(f'Digite la vista más observada {BM+1}: '))
+	    distancia_atras = float(input(f'Digite la distancia al BM atras {BM+1}: '))
+	    nombre_BM_adelante = input(f'Digite el nombre del BM {BM+2}: ')
+	    vistaMenos = float(input(f'Digite la vista menos observada {BM+2}: '))
+	    distancia_adelante = float(input(f'Digite la distancia al BM adelante {BM+2}: '))
+
+	    print('='*80)
+
+	    datos_linea = [nombre_BM_atras, vistaMas, distancia_atras, nombre_BM_adelante, vistaMenos, distancia_adelante]
+	    datos_medidos.append(datos_linea.copy())
+
+	    if j != 0:
+		sumVMAS = sumVMAS + datos_linea[1]
+		sumdist_atras = sumdistafter + datos_linea[2]
+		sumVMENOS = sumVMENOS + datos_linea[4]
+		sumdist_adelante = sumdistnext + datos_linea[5]
+		j += 1
+	    else:
+		j += 1
+
+	dist = sumdist_atras + sumdist_adelante
+	error_nivelación = sumVMAS - sumVMENOS
+	corrección_nivelación = error_nivelación / dist
+
+	print('El error de la nivelación es:', error_nivelación)
+	print('La sumatoria de las vistas mas es:', sumVMAS)
+	print('La sumatoria de las vistas menos es:', sumVMENOS)
+	print('La distancia total es:', dist)
+	print('La corrección de la nivelación es:', corrección_nivelación)
+	print(datos_linea)
+
+	datos_medidos[1].append(datos_medidos[1][3])
 
     elif CalNiv == "2":
         print("Eligio calculo por pesos")
