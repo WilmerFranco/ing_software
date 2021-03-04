@@ -6,7 +6,6 @@ import sqlite3							#Nos permite conectarnos a una base de datos (sqlite3)
 
 def borrar_ventana() :
     ventana.destroy()
-
     
 ventana=Tk()
 ventana.title("Programa de Calculo Carteras")	#Titulo de la ventana principal
@@ -960,6 +959,246 @@ elif eligio == "2":
 
         elif poligonal == "3":
             print("Eligio ajuste por método Tránsito")
+            
+			#[A J U S T E  D E  P O L I G O N A L  P O R  E L  M É T O D O  T R A N S I T O]
+
+
+            import math
+
+            def gms2dec(angulo):
+                grados = int(angulo)
+                auxiliar = (angulo - grados) * 100
+                minutos = int(auxiliar)
+                segundos = (auxiliar - minutos)*100
+
+                angulo_dec = grados + minutos / 60 + segundos / 3600
+
+                return angulo_dec
+
+            #[ESTE BLOQUE CALCULA EL ACIMUT INICIAL]
+
+            def acimut_linea(x1, y1, x2, y2):
+                dx = x2 - x1
+                dy = y2 - y1
+
+                if dy != 0:
+                    rumbo = math.degrees(math.atan(dx/dy))
+
+                    if dx > 0 and dy > 0:
+                        acimut = rumbo
+                    elif dx > 0 and dy < 0:
+                        acimut = 180 + rumbo
+                    elif dx < 0 and dy < 0:
+                        acimut = 180 + rumbo
+                    elif dx < 0 and dy > 0:
+                        acimut = 360 + rumbo
+                    elif dx == 0 and dy > 0:
+                        acimut = 0
+                    elif dx == 0 and dy > 0:
+                        acimut = 180
+                else:
+                    if dx > 0:
+                        acimut = 90
+                    elif dx < 0:
+                        acimut = 270
+                    else:
+                        acimut = -1
+                
+                return acimut
+
+            #[ESTE BLOQUE CONVIERTE EL ANGULO INGRESADO DE GRADOS DECIMALES A GGMMSS]
+            def dec2gms(angulo_dec):
+                grados = int(angulo_dec)
+                auxiliar = (angulo_dec - grados)*60
+                minutos = int(auxiliar)
+                segundos = round((auxiliar - minutos)*60,0)
+
+                angulo_gms = '{:03d}'.format(grados) + '° ' + '{:02d}'.format(minutos) + "' " + '{:04.1f}'.format(segundos) + '"'
+
+                return angulo_gms
+
+            #[CALCULA EL CONTRA ACIMUT Y RUMBO]
+            def acimut_poligonal(acimut_anterior, angulo_observ):
+                if acimut_anterior >= 180:
+                    contra_acimut = acimut_anterior - 180
+                else:
+                    contra_acimut = acimut_anterior + 180
+                
+                acimut = contra_acimut + angulo_observ
+
+                if acimut >= 360:
+                    acimut = acimut - 360
+                
+                return acimut
+
+            #[CALCULA LAS PROYECCIONES]
+            def proyecciones(acimut, distancia):
+                
+                acimut = math.radians(acimut)
+
+                valor_proyecciones = []
+                valor_proyecciones.append(math.sin(acimut)*distancia)
+                valor_proyecciones.append(math.cos(acimut)*distancia)
+
+                return valor_proyecciones
+
+            #[SOLICTA NUMERO DE DELTAS Y QUE SE INDIQUE SI LOS ANGULOS SON INTERNOS Y EXTERNOS]
+            def main():
+
+                print()
+                print('='*173)
+                print()
+                print('{:^173}'.format('A J U S T E  D E  P O L I G O N A L  P O R  E L  M E T O D O  T R A N S I T O'))
+                print()
+                print('='*173)
+                print()
+
+                deltas = int(input('Digite el numero de deltas en la poligonal: '))
+                ang_externos = int(input('¿Angulos externos [1 = SI] [0 = NO]: '))
+
+                #[AL DEFINIR ANGULOS INTERNOS Y EXTERNOS CALCULA SUMATORIA TEORICA DE ANGULO]
+                if ang_externos == 1:
+                    suma_teorica_ang = (deltas + 2) *180
+                else:
+                    suma_teorica_ang = (deltas - 2) *180
+
+                #[SOLICITA LAS COORDENADAS DEL PUNTO DE ARMADA Y DEL PUNTO DE REFERENCIA]
+                x_inicio = float(input('Digite la coordenada X (E) del punto de inicio: '))
+                y_inicio = float(input('DIgite la coordenada Y (N) del punto de inicio: '))
+                x_referencia = float(input('Digite la coordena X (E) del punto de referencia: '))
+                y_referencia = float(input('Digite la coordena Y (N) del punto de referencia: '))
+
+                #[IMPRIME EL ACIMUT DE REFERENCIA]
+                acimut_ref = acimut_linea(x_inicio, y_inicio, x_referencia, y_referencia)
+                print('\n', f'El acimut calculado es: {dec2gms(acimut_ref)}')
+
+                #[IMPRIME LA SUMATORIA TEORICA DE ANGULOS]
+                print(f'La sumatoria teórica de ángulos es: {suma_teorica_ang}°')
+
+                #[ALMACENA LOS DATOS CAPTURADOS EN LISTAS]
+                datos_medidos = []
+                datos_medidos.append (['DELTA','ANG OBSER', 'DIST', 'ANG OBSERV DEC', 'ANG OBSER CORREG', 'AZIMUTH', 'PRY X', 'PRY Y', 'PRY X COREG', 'PRY Y COREG', 'COORD X', 'COORD Y'])
+
+                j = 0
+                sumang = 0.0
+                sumdist = 0.0
+
+                #[SOLICITA LOS DATOS DE CADA DELTA, NOMBRE, ANGULO Y DISTANCIA]
+                # CON NUMERO DE DELTAS Y ANGULOS OBSERVADOS REALIZA LA SUMA DE ANGULOS
+                # CALCULA EL ERROR ANGULAR Y LA CORRECCION ANGULAR
+                # IMPRIME EL ERROR ANGULAR
+                # IMPRIME LA CORRECCION ANGULAR
+                
+                for delta in (range(deltas+1)):
+                    print('='*80)
+
+                    nombre_delta = input(f'Digite el nombre del delta {delta+1}: ')
+                    ang_observado = float(input(f'Digite el angulo observado {delta+1}: '))
+                    distancia = float(input(f'Digite la dista de la linea {delta+1}: '))
+
+                    print('='*80)
+
+                    datos_linea = [nombre_delta, ang_observado, distancia, gms2dec(ang_observado)]
+                    datos_medidos.append(datos_linea.copy())
+
+                    if j != 0:
+                        sumdist = sumdist + distancia
+                        sumang = sumang + datos_linea[3]
+                        j += 1
+                    else:
+                        j += 1
+                
+                error_angular = suma_teorica_ang - sumang
+                correccion_angular = error_angular / deltas
+                
+                print('El error angular es:', error_angular)
+                print('La corrección angular es:', correccion_angular)
+
+                datos_medidos[1].append(datos_medidos[1][3])
+                datos_medidos[1].append(acimut_ref + datos_medidos[1][3])
+
+                #[VARIABLES DE SUMA DE PROYECCIONES]
+                i = 0
+                suma_px = 0.0
+                suma_py = 0.0
+                proyec_punto = []
+
+                #[CALCULA CORRECCIONES A ANGULO, ACIMUT Y PROYECCIONES ]
+                for dato in datos_medidos:
+
+                    if i < 2:
+                        i += 1
+                        continue
+                    
+                    datos_medidos[i].append(datos_medidos[i][3] + correccion_angular)
+
+                    if datos_medidos[i-1][4] >= 180:
+                        acimut_deltas = datos_medidos[i-1][5] - 180 + datos_medidos[i][4]
+                    else:
+                        acimut_deltas = datos_medidos[i-1][5] + 180 + datos_medidos[i][4]
+                    
+                    if acimut_deltas >= 360:
+                        acimut_deltas -= 360
+
+                    datos_medidos[i].append(acimut_deltas)
+
+                    proyec_punto = proyecciones(acimut_deltas, datos_medidos[i][2])
+
+                    datos_medidos[i].append(proyec_punto[0])
+                    datos_medidos[i].append(proyec_punto[1])
+
+                    suma_px += datos_medidos[i][6]
+                    suma_py += datos_medidos[i][7]
+
+                    i += 1
+
+                print()
+
+                datos_medidos [1][:] += [0, 0, 0, 0, x_inicio, y_inicio]
+
+                #[ALMACENA LAS PROYECCIONES CORREGIDAS EN LA LISTA]
+                i = 0
+
+                for dato in datos_medidos:
+
+                    if i < 2:
+                        i += 1
+                        continue
+
+                    #[CALCULA EL ERROR DE LAS PROYECCIONES]
+                    datos_medidos[i].append(datos_medidos[i][6] - (suma_px / sumdist)*datos_medidos[i][2])
+                    datos_medidos[i].append(datos_medidos[i][7] - (suma_py / sumdist)*datos_medidos[i][2])
+
+                    #[CALCULA COORDENADAS]
+                    datos_medidos[i].append(datos_medidos[i-1][10] + datos_medidos[i][8])
+                    datos_medidos[i].append(datos_medidos[i-1][11] + datos_medidos[i][9])
+
+                    i += 1
+
+                #[IMPRIME DATOS CALCULADOS]
+                print()
+
+                print('='*173)
+                print('{:^10}'.format('DELTA'), '{:^8}'.format('ANGULO'), '{:^8}'.format('DISTANC'), '{:^10}'.format('ANGULO'), '{:^10}'.format('AZIMUTH'), '{:^10}'.format('PROYECC'), '{:^10}'.format('PROYECC'), '{:^10}'.format('PROYECC'), '{:^10}'.format('PROYECC'), '{:^11}'.format('COORDEN'), '{:^11}'.format('COORDEN'), sep='\t')
+
+                print('{:^10}'.format(''), '{:^8}'.format('OBSERV'), '{:^8}'.format('(m)'), '{:^10}'.format('CORREGIDO'), '{:^10}'.format(''), '{:^10}'.format('X'), '{:^10}'.format('Y'), '{:^10}'.format('CORR X'), '{:^10}'.format('CORR Y'), '{:^11}'.format('X'), '{:^11}'.format('Y'), sep='\t')
+                print('='*173)
+
+                i = 0
+
+                for dato in datos_medidos:
+                    if i == 0:
+                        i += 1
+                        continue
+
+                    print('{:^10}'.format(dato[0]),'{:8.4f}'.format(dato[1]), '{:8.4f}'.format(dato[2]), '{:10}'.format(dec2gms(dato[4])), '{:10}'.format(dec2gms(dato[5])), '{:+010.3f}'.format(dato[6]), '{:+010.3f}'.format(dato[7]), '{:+010.3f}'.format(dato[8]), '{:+010.3f}'.format(dato[9]), '{:11.3f}'.format(dato[10]), '{:11.3f}'.format(dato[11]), sep='\t')
+
+                    i += 1
+
+                print('='*173)
+
+            if __name__ == '__main__':
+                main()
         else:
             print("Opción no válida")
     elif poligonal == "2":
@@ -971,487 +1210,807 @@ elif eligio == "2":
         poligonal=input()
         if poligonal == "1":
             print("Eligio ajuste por método Crandall")
+            #[A J U S T E  D E  P O L I G O N A L  P O R  E L  M E T O D O  C R A N D A L L]
+            import math
+            import time as t
+            import datetime
+            #import numpy as np
+            #file='coor.txt'
+            #data=np.loadtxt(file,delimiter='\t',skiprows=0,usecols=[0,1])
+            #print(data)
+
+            tiempo_local = t.asctime(t.localtime(t.time()))
+            print("Fecha y hora de creacion del archivo: ",tiempo_local)
+
+            def gms2dec(angulo):
+                grados = int(angulo)
+                auxiliar = (angulo - grados) * 100
+                minutos = int(auxiliar)
+                segundos = (auxiliar - minutos)*100
+
+                angulo_dec = grados + minutos / 60 + segundos / 3600
+
+                return angulo_dec
+
+            #[ESTE BLOQUE CALCULA EL ACIMUT INICIAL y FINAL]
+
+            def acimut_linea(x1, y1, x2, y2):
+                dx = x2 - x1
+                dy = y2 - y1
+
+                if dy != 0:
+                    rumbo = math.degrees(math.atan(dx/dy))
+
+                    if dx > 0 and dy > 0:
+                        acimut = rumbo
+                    elif dx > 0 and dy < 0:
+                        acimut = 180 + rumbo
+                    elif dx < 0 and dy < 0:
+                        acimut = 180 + rumbo
+                    elif dx < 0 and dy > 0:
+                        acimut = 360 + rumbo
+                    elif dx == 0 and dy > 0:
+                        acimut = 0
+                    elif dx == 0 and dy > 0:
+                        acimut = 180
+                else:
+                    if dx > 0:
+                        acimut = 90
+                    elif dx < 0:
+                        acimut = 270
+                    else:
+                        acimut = -1
+                
+                return acimut
+
+            #[ESTE BLOQUE CONVIERTE EL ANGULO INGRESADO DE GRADOS DECIMALES A GGMMSS]
+            def dec2gms(angulo_dec):
+                grados = int(angulo_dec)
+                auxiliar = (angulo_dec - grados)*60
+                minutos = int(auxiliar)
+                segundos = round((auxiliar - minutos)*60,0)
+
+                angulo_gms = '{:03d}'.format(grados) + '° ' + '{:02d}'.format(minutos) + "' " + '{:04.1f}'.format(segundos) + '"'
+
+                return angulo_gms
+
+            #[CALCULA EL CONTRA ACIMUT Y RUMBO]
+            def acimut_poligonal(acimut_anterior, angulo_observ):
+                if acimut_anterior >= 180:
+                    contra_acimut = acimut_anterior - 180
+                else:
+                    contra_acimut = acimut_anterior + 180
+                
+                acimut = contra_acimut + angulo_observ
+
+                if acimut >= 360:
+                    acimut = acimut - 360
+                
+                return acimut
+
+            #[CALCULA LAS PROYECCIONES]
+            def proyecciones(acimut, distancia):
+                
+                acimut = math.radians(acimut)
+
+                valor_proyecciones = []
+                valor_proyecciones.append(math.sin(acimut)*distancia)
+                valor_proyecciones.append(math.cos(acimut)*distancia)
+
+                return valor_proyecciones
+
+            #[SOLICTA NUMERO DE DELTAS Y QUE SE INDIQUE SI LOS ANGULOS SON INTERNOS Y EXTERNOS]
+            def main():
+
+                print()
+                print('='*150)
+                print()
+                print('{:^150}'.format('A J U S T E  D E  P O L I G O N A L  P O R  E L  M E T O D O  C R A N D A L L'))
+                print()
+                print('='*150)
+                print()
+                print('{:^150}'.format("INGENIERÍA DE SOFTWARE\n"))
+                print('{:^150}'.format("PROFESOR: Evelio Luis Madera Arteaga\n"))
+                print('{:^150}'.format("Wilmer Franco Hernandez         COD: 20201732014\n"))
+                print('{:^150}'.format("Juliana Manuela Pachón Florián  COD: 20192732006\n"))
+                print('{:^150}'.format("Jean Pierre Riaño Melo          COD: 20192732030\n"))
+                print('{:^150}'.format("Julian Camilo Lopez Alcala      COD: 20192732024\n"))
+                print()
+
+                deltas = int(input('Digite el numero de deltas en la poligonal: '))
+                '''ang_externos = int(input('¿Angulos externos [1 = SI] [0 = NO]: '))
+
+                #[AL DEFINIR ANGULOS INTERNOS Y EXTERNOS CALCULA SUMATORIA TEORICA DE ANGULO]
+                if ang_externos == 1:
+                    suma_teorica_ang = (deltas + 2) *180
+                else:
+                    suma_teorica_ang = (deltas - 2) *180'''
+
+                #[SOLICITA LAS COORDENADAS DEL PUNTO DE ARMADA Y DEL PUNTO DE REFERENCIA INICIAL]
+                x_inicio = float(input('Digite la coordenada X (E) del punto de inicio: '))
+                y_inicio = float(input('Digite la coordenada Y (N) del punto de inicio: '))
+                x_referencia = float(input('Digite la coordena X (E) del punto de referencia: '))
+                y_referencia = float(input('Digite la coordena Y (N) del punto de referencia: ') + "\n")
+
+                
+                #[SOLICITA LAS COORDENADAS DEL PUNTO DE ARMADA Y DEL PUNTO DE REFERENCIA FINAL]
+                x_final = float(input('Digite la coordenada X (E) del punto de final: '))
+                y_final = float(input('Digite la coordenada Y (N) del punto de final: '))
+                x_reffinal = float(input('Digite la coordena X (E) del punto de reffinal: '))
+                y_reffinal = float(input('Digite la coordena Y (N) del punto de reffinal: ') + "\n")
+
+                #[IMPRIME EL ACIMUT DE REFERENCIA INICIAL]
+                acimut_refini = acimut_linea(x_inicio, y_inicio, x_referencia, y_referencia)
+                print('\n', f'El acimut calculado inicial es: {dec2gms(acimut_refini)}' + "\n")
+                #[IMPRIME EL ACIMUT DE REFERENCIA FINAL]
+                acimut_reffin = acimut_linea(x_final, y_final, x_reffinal, y_reffinal)
+                print('\n', f'El acimut téorico de llegada es: {dec2gms(acimut_reffin)}' + "\n")
+                
+                #[IMPRIME LA SUMATORIA TEORICA DE ANGULOS]
+                '''print(f'La sumatoria teórica de ángulos es: {suma_teorica_ang}°')'''
+
+                #[ALMACENA LOS DATOS CAPTURADOS EN LISTAS]
+                datos_medidos = []
+                datos_medidos.append (['DELTA','AZIMUTH', 'DIST', 'AZIMUTH DEC', 'AZIMUTH CORREG', 'PRY X', 'PRY Y', 'PRY X COREG', 'PRY Y COREG', 'COORD X', 'COORD Y'])
+
+                j = 0
+                sumang = 0.0
+                sumdist = 0.0
+
+                #[SOLICITA LOS DATOS DE CADA DELTA, NOMBRE, ANGULO Y DISTANCIA]
+                # CON NUMERO DE DELTAS Y ANGULOS OBSERVADOS REALIZA LA SUMA DE ANGULOS
+                # CALCULA EL ERROR ANGULAR Y LA CORRECCION ANGULAR
+                # IMPRIME EL ERROR ANGULAR
+                # IMPRIME LA CORRECCION ANGULAR
+                
+                for delta in (range(deltas)):
+                    print('='*160)
+
+                    nombre_delta = input(f'Digite el nombre del delta {delta+1}: ')
+                    az_observado = float(input(f'Digite el azimuth observado {delta+1}: '))
+                    distancia = float(input(f'Digite la distancia de la linea {delta+1}: '))
+
+                    print('='*160)
+
+                    datos_linea = [nombre_delta, az_observado, distancia, gms2dec(az_observado)]
+                    datos_medidos.append(datos_linea.copy())
+
+                    if j != -1:
+                        sumdist = sumdist + distancia
+                        azlinfin = datos_linea[3]
+                        j += 1
+                    else:
+                        j += 1
+
+                    print('sumatoria de distancias')
+                    print(sumdist)
+                
+                error_angular = acimut_reffin - azlinfin
+                correccion_angular = error_angular / deltas
+
+                print('correccion angular')
+                print()
+                
+                print('El error angular es:', dec2gms(error_angular))
+                print('La corrección angular es:', dec2gms(correccion_angular))
+
+                datos_medidos[1].append(datos_medidos[1][3])
+                datos_medidos[1].append(acimut_refini + datos_medidos[1][3])
+
+                print(datos_medidos)
+
+                #[VARIABLES DE SUMA DE PROYECCIONES]
+                i = 0
+                suma_px = 0.0
+                suma_py = 0.0
+                proyec_punto = []
+
+                
+                
+                #[CALCULA CORRECCIONES A ANGULO, ACIMUT Y PROYECCIONES ]
+                for dato in datos_medidos:
+
+                    if i < 2:
+                        i += 1
+                        continue
+                    
+                    datos_medidos[i].append(datos_medidos[i][3] + correccion_angular)
+                    print ('datos_medidos')
+                    print(datos_medidos)
+
+                    if datos_medidos[i-1][4] >= 180:
+                        acimut_deltas = datos_medidos[i-1][4] #- 180 + datos_medidos[i][4]'''
+                    else:
+                        acimut_deltas = datos_medidos[i-1][4] #+ 180 + datos_medidos[i][4]'''
+                    
+                    if acimut_deltas >= 360:
+                        acimut_deltas -= 360
+
+                    datos_medidos[i].append(acimut_deltas)
+
+                    proyec_punto = proyecciones(acimut_deltas, datos_medidos[i][2])
+
+                    datos_medidos[i].append(proyec_punto[0])
+                    datos_medidos[i].append(proyec_punto[1])
+
+                    suma_px += datos_medidos[i][5]
+                    suma_py += datos_medidos[i][6]
+
+                    i += 1
+
+                print()
+
+                datos_medidos [1][:] += [0, 0, 0, 0, x_inicio, y_inicio]
+
+                #[ALMACENA LAS PROYECCIONES CORREGIDAS EN LA LISTA]
+                i = 0
+
+                for dato in datos_medidos:
+
+                    if i < 2:
+                        i += 1
+                        continue
+
+                    #[CALCULA EL ERROR DE LAS PROYECCIONES]
+                    datos_medidos[i].append(datos_medidos[i][5] - (suma_px / sumdist)*datos_medidos[i][2])
+                    datos_medidos[i].append(datos_medidos[i][6] - (suma_py / sumdist)*datos_medidos[i][2])
+
+                    #[CALCULA COORDENADAS]
+                    datos_medidos[i].append(datos_medidos[i-1][9] + datos_medidos[i][7])
+                    datos_medidos[i].append(datos_medidos[i-1][10] + datos_medidos[i][8])
+
+                    i += 1
+
+                #[IMPRIME DATOS CALCULADOS]
+                print()
+                print('{:^150}'.format("DATOS FINALES\n"))
+                print('='*160)
+                print('{:^6}'.format('DELTA'),'{:^8}'.format('AZIMUTH'),'{:^8}'.format('DISTANC'),'{:^10}'.format('AZIMUTH'),'{:^10}'.format('PROYECC'),'{:^10}'.format('PROYECC'),'{:^10}'.format('PROYECC'),'{:^10}'.format('PROYECC'),'{:^11}'.format('COORDEN'),'{:^11}'.format('COORDEN'), sep='\t')
+
+                print('{:^6}'.format(''),'{:^8}'.format('OBSERV'),'{:^8}'.format('(m)'),'{:^10}'.format('CORREGIDO'),'{:^10}'.format('X'),'{:^10}'.format('Y'),'{:^10}'.format('CORR X'),'{:^10}'.format('CORR Y'),'{:^11}'.format('X'),'{:^11}'.format('Y'), sep='\t')
+                print('='*160)
+
+                i = 0
+
+                for dato in datos_medidos:
+                    if i == 0:
+                        i += 1
+                        continue
+
+                    print('{:^6}'.format(dato[0]),'{:8.4f}'.format(dato[1]),'{:8.4f}'.format(dato[2]),'{:10}'.format(dec2gms(dato[4])),'{:+010.3f}'.format(dato[6]),'{:+010.3f}'.format(dato[7]),'{:+010.3f}'.format(dato[8]),'{:+010.3f}'.format(dato[9]),'{:11.3f}'.format(dato[10]),'{:11.3f}'.format(dato[11]), sep='\t')
+
+                    i += 1
+
+                print('='*160)
+                
+
+            if __name__ == '__main__':
+                main()
+
+            archivo=open("Datos_Poligonal.txt","w")
+            archivo.write("**CALCULO Y AJUSTE DE UNA POLIGONAL ABIERTA POR METODO CRANDALL**\n")
+            archivo.write(str("Fecha y hora de creacion del archivo: ") )
+            archivo.write(str(tiempo_local) + "\n")
+            archivo.write("INGENIERÍA DE SOFTWARE\n")
+            archivo.write("PROFESOR: Evelio Luis Madera Arteaga\n")
+            archivo.write("Wilmer Franco Hernandez         COD: 20201732014\n")
+            archivo.write("Juliana Manuela Pachón Florián  COD: 20192732006\n")
+            archivo.write("Jean Pierre Riaño Melo          COD: 20192732030\n")
+            archivo.write("Julian Camilo Lopez Alcala      COD: 20192732024\n")
+            archivo.write(" \n")
+            archivo.write('{:^150}'.format("DATOS FINALES\n"))
+            archivo.write(" \n")
+            archivo.write('='*160)
+            archivo.write(" \n")
+            archivo.write('{:^6}'.format('DELTA')),archivo.write('{:^8}'.format('AZIMUTH')),archivo.write('{:^8}'.format('DISTANC')),archivo.write('{:^10}'.format('AZIMUTH')),archivo.write('{:^10}'.format('PROYECC')),archivo.write('{:^10}'.format('PROYECC')),archivo.write('{:^10}'.format('PROYECC')),archivo.write('{:^10}'.format('PROYECC')),archivo.write('{:^11}'.format('COORDEN')),archivo.write('{:^11}'.format('COORDEN'))
+            archivo.write(" \n")
+            archivo.write('{:^6}'.format('')),archivo.write('{:^8}'.format('OBSERV')),archivo.write('{:^8}'.format('(m)')),archivo.write('{:^10}'.format('CORREGIDO')),archivo.write('{:^10}'.format('X')),archivo.write('{:^10}'.format('Y')),archivo.write('{:^10}'.format('CORR X')),archivo.write('{:^10}'.format('CORR Y')),archivo.write('{:^11}'.format('X')),archivo.write('{:^11}'.format('Y'))
+            archivo.write(" \n")
+            archivo.write(" \n")
+            archivo.write('='*160)
+            archivo.write(" \n")
+            archivo.write('='*160)
+            '''archivo.write("LONG_POLIGONAL=  % s\n"%sumdist)
+            archivo.write('{:^6}'.format(dato[0])),archivo.write('{:8.4f}'.format(dato[1])),archivo.write('{:8.4f}'.format(dato[2])),archivo.write('{:10}'.format(dec2gms(dato[4]))),archivo.write('{:+010.3f}'.format(dato[6])),archivo.write('{:+010.3f}'.format(dato[7])),archivo.write('{:+010.3f}'.format(dato[8])),archivo.write('{:+010.3f}'.format(dato[9])),archivo.write('{:11.3f}'.format(dato[10])),archivo.write('{:11.3f}'.format(dato[11]))
+            archivo.write('{:^6}'.format('DELTA'), '{:^8}'.format('AZIMUTH'), '{:^8}'.format('DISTANC'), '{:^10}'.format('AZIMUTH'), '{:^10}'.format('PROYECC'), '{:^10}'.format('PROYECC'), '{:^10}'.format('PROYECC'), '{:^10}'.format('PROYECC'), '{:^11}'.format('COORDEN'), '{:^11}'.format('COORDEN'), sep='\t')
+            archivo.write('{:^6}'.format(''), '{:^8}'.format('OBSERV'),'{:^8}'.format('(m)'),'{:^10}'.format('CORREGIDO'),'{:^10}'.format('X'), '{:^10}'.format('Y'), '{:^10}'.format('CORR X'), '{:^10}'.format('CORR Y'), '{:^11}'.format('X'), '{:^11}'.format('Y'), sep='\t')
+            archivo.write('{:^6}'.format(dato[0]), '{:8.4f}'.format(dato[1]), '{:8.4f}'.format(dato[2]), '{:10}'.format(dec2gms(dato[4])), '{:+010.3f}'.format(dato[6]), '{:+010.3f}'.format(dato[7]), '{:+010.3f}'.format(dato[8]), '{:+010.3f}'.format(dato[9]), '{:11.3f}'.format(dato[10]), '{:11.3f}'.format(dato[11]), sep='\t')
+            archivo.write(" \n")
+            archivo.write("ERROR_TOTAL=  % s\n"%ed )
+            archivo.write(" \n")
+            archivo.write("PRESICION= 1:%s\n"%prec)
+            archivo.write(" \n")
+            archivo.write("id,angulo,distancia,acimut,proy_N-S, proy_E-W,proy_Correg_N-S,proy_Correg_E-W,Norte, Este\n")
+            archivo.write("%s"%observaciones)
+            archivo.write(" \n")
+            archivo.write("*****COORDENADAS FINALES*****\n")
+            archivo.write("id,    Norte,    Este\n")
+            archivo.write("%s\n"%coordenadas)'''
+            archivo.close()
         elif poligonal == "2":
-            print("Eligio ajuste por método Brujula")
-            #[A J U S T E  D E  P O L I G O N A L  P O R  E L  M E T O D O  D E  L A  B R U J U L A]
+            print("Eligio ajuste por método Brújula")
+			#[A J U S T E  D E  P O L I G O N A L  P O R  E L  M É T O D O  D E  L A  B R Ú J U L A]
 
-        import math
 
-        def gms2dec(angulo):
-            grados = int(angulo)
-            auxiliar = (angulo - grados) * 100
-            minutos = int(auxiliar)
-            segundos = (auxiliar - minutos)*100
+            import math
 
-            angulo_dec = grados + minutos / 60 + segundos / 3600
+            def gms2dec(angulo):
+                grados = int(angulo)
+                auxiliar = (angulo - grados) * 100
+                minutos = int(auxiliar)
+                segundos = (auxiliar - minutos)*100
 
-            return angulo_dec
+                angulo_dec = grados + minutos / 60 + segundos / 3600
 
-        #[ESTE BLOQUE CALCULA EL ACIMUT INICIAL]
+                return angulo_dec
 
-        def acimut_linea(x1, y1, x2, y2):
-            dx = x2 - x1
-            dy = y2 - y1
+            #[ESTE BLOQUE CALCULA EL ACIMUT INICIAL]
 
-            if dy != 0:
-                rumbo = math.degrees(math.atan(dx/dy))
+            def acimut_linea(x1, y1, x2, y2):
+                dx = x2 - x1
+                dy = y2 - y1
 
-                if dx > 0 and dy > 0:
-                    acimut = rumbo
-                elif dx > 0 and dy < 0:
-                    acimut = 180 + rumbo
-                elif dx < 0 and dy < 0:
-                    acimut = 180 + rumbo
-                elif dx < 0 and dy > 0:
-                    acimut = 360 + rumbo
-                elif dx == 0 and dy > 0:
-                    acimut = 0
-                elif dx == 0 and dy > 0:
-                    acimut = 180
-            else:
-                if dx > 0:
-                    acimut = 90
-                elif dx < 0:
-                    acimut = 270
+                if dy != 0:
+                    rumbo = math.degrees(math.atan(dx/dy))
+
+                    if dx > 0 and dy > 0:
+                        acimut = rumbo
+                    elif dx > 0 and dy < 0:
+                        acimut = 180 + rumbo
+                    elif dx < 0 and dy < 0:
+                        acimut = 180 + rumbo
+                    elif dx < 0 and dy > 0:
+                        acimut = 360 + rumbo
+                    elif dx == 0 and dy > 0:
+                        acimut = 0
+                    elif dx == 0 and dy > 0:
+                        acimut = 180
                 else:
-                    acimut = -1
-            
-            return acimut
-
-        #[ESTE BLOQUE CONVIERTE EL ANGULO INGRESADO DE GRADOS DECIMALES A GGMMSS]
-        def dec2gms(angulo_dec):
-            grados = int(angulo_dec)
-            auxiliar = (angulo_dec - grados)*60
-            minutos = int(auxiliar)
-            segundos = round((auxiliar - minutos)*60,0)
-
-            angulo_gms = '{:03d}'.format(grados) + '° ' + '{:02d}'.format(minutos) + "' " + '{:04.1f}'.format(segundos) + '"'
-
-            return angulo_gms
-
-        #[CALCULA EL CONTRA ACIMUT Y RUMBO]
-        def acimut_poligonal(acimut_anterior, angulo_observ):
-            if acimut_anterior >= 180:
-                contra_acimut = acimut_anterior - 180
-            else:
-                contra_acimut = acimut_anterior + 180
-            
-            acimut = contra_acimut + angulo_observ
-
-            if acimut >= 360:
-                acimut = acimut - 360
-            
-            return acimut
-
-        #[CALCULA LAS PROYECCIONES]
-        def proyecciones(acimut, distancia):
-            
-            acimut = math.radians(acimut)
-
-            valor_proyecciones = []
-            valor_proyecciones.append(math.sin(acimut)*distancia)
-            valor_proyecciones.append(math.cos(acimut)*distancia)
-
-            return valor_proyecciones
-
-        #[SOLICTA NUMERO DE DELTAS Y QUE SE INDIQUE SI LOS ANGULOS SON INTERNOS Y EXTERNOS]
-        def main():
-
-            print()
-            print('='*173)
-            print()
-            print('{:^173}'.format('A J U S T E  D E  P O L I G O N A L  P O R  E L  M E T O D O  D E  L A  B R U J U L A'))
-            print()
-            print('='*173)
-            print()
-
-            deltas = int(input('Digite el numero de deltas en la poligonal: '))
-            ang_externos = int(input('¿Angulos externos [1 = SI] [0 = NO]: '))
-
-            #[AL DEFINIR ANGULOS INTERNOS Y EXTERNOS CALCULA SUMATORIA TEORICA DE ANGULO]
-            if ang_externos == 1:
-                suma_teorica_ang = (deltas + 2) *180
-            else:
-                suma_teorica_ang = (deltas - 2) *180
-
-            #[SOLICITA LAS COORDENADAS DEL PUNTO DE ARMADA Y DEL PUNTO DE REFERENCIA]
-            x_inicio = float(input('Digite la coordenada X (E) del punto de inicio: '))
-            y_inicio = float(input('DIgite la coordenada Y (N) del punto de inicio: '))
-            x_referencia = float(input('Digite la coordena X (E) del punto de referencia: '))
-            y_referencia = float(input('Digite la coordena Y (N) del punto de referencia: '))
-
-            #[IMPRIME EL ACIMUT DE REFERENCIA]
-            acimut_ref = acimut_linea(x_inicio, y_inicio, x_referencia, y_referencia)
-            print('\n', f'El acimut calculado es: {dec2gms(acimut_ref)}')
-
-            #[IMPRIME LA SUMATORIA TEORICA DE ANGULOS]
-            print(f'La sumatoria teórica de ángulos es: {suma_teorica_ang}°')
-
-            #[ALMACENA LOS DATOS CAPTURADOS EN LISTAS]
-            datos_medidos = []
-            datos_medidos.append (['DELTA','ANG OBSER', 'DIST', 'ANG OBSERV DEC', 'ANG OBSER CORREG', 'AZIMUTH', 'PRY X', 'PRY Y', 'PRY X COREG', 'PRY Y COREG', 'COORD X', 'COORD Y'])
-
-            j = 0
-            sumang = 0.0
-            sumdist = 0.0
-
-            #[SOLICITA LOS DATOS DE CADA DELTA, NOMBRE, ANGULO Y DISTANCIA]
-            # CON NUMERO DE DELTAS Y ANGULOS OBSERVADOS REALIZA LA SUMA DE ANGULOS
-            # CALCULA EL ERROR ANGULAR Y LA CORRECCION ANGULAR
-            # IMPRIME EL ERROR ANGULAR
-            # IMPRIME LA CORRECCION ANGULAR
-            
-            for delta in (range(deltas+1)):
-                print('='*80)
-
-                nombre_delta = input(f'Digite el nombre del delta {delta+1}: ')
-                ang_observado = float(input(f'Digite el angulo observado {delta+1}: '))
-                distancia = float(input(f'Digite la dista de la linea {delta+1}: '))
-
-                print('='*80)
-
-                datos_linea = [nombre_delta, ang_observado, distancia, gms2dec(ang_observado)]
-                datos_medidos.append(datos_linea.copy())
-
-                if j != 0:
-                    sumdist = sumdist + distancia
-                    sumang = sumang + datos_linea[3]
-                    j += 1
-                else:
-                    j += 1
-            
-            error_angular = suma_teorica_ang - sumang
-            correccion_angular = error_angular / deltas
-            
-            print('El error angular es:', error_angular)
-            print('La corrección angular es:', correccion_angular)
-
-            datos_medidos[1].append(datos_medidos[1][3])
-            datos_medidos[1].append(acimut_ref + datos_medidos[1][3])
-
-            #[VARIABLES DE SUMA DE PROYECCIONES]
-            i = 0
-            suma_px = 0.0
-            suma_py = 0.0
-            proyec_punto = []
-
-            #[CALCULA CORRECCIONES A ANGULO, ACIMUT Y PROYECCIONES ]
-            for dato in datos_medidos:
-
-                if i < 2:
-                    i += 1
-                    continue
+                    if dx > 0:
+                        acimut = 90
+                    elif dx < 0:
+                        acimut = 270
+                    else:
+                        acimut = -1
                 
-                datos_medidos[i].append(datos_medidos[i][3] + correccion_angular)
+                return acimut
 
-                if datos_medidos[i-1][4] >= 180:
-                    acimut_deltas = datos_medidos[i-1][5] - 180 + datos_medidos[i][4]
+            #[ESTE BLOQUE CONVIERTE EL ANGULO INGRESADO DE GRADOS DECIMALES A GGMMSS]
+            def dec2gms(angulo_dec):
+                grados = int(angulo_dec)
+                auxiliar = (angulo_dec - grados)*60
+                minutos = int(auxiliar)
+                segundos = round((auxiliar - minutos)*60,0)
+
+                angulo_gms = '{:03d}'.format(grados) + '° ' + '{:02d}'.format(minutos) + "' " + '{:04.1f}'.format(segundos) + '"'
+
+                return angulo_gms
+
+            #[CALCULA EL CONTRA ACIMUT Y RUMBO]
+            def acimut_poligonal(acimut_anterior, angulo_observ):
+                if acimut_anterior >= 180:
+                    contra_acimut = acimut_anterior - 180
                 else:
-                    acimut_deltas = datos_medidos[i-1][5] + 180 + datos_medidos[i][4]
+                    contra_acimut = acimut_anterior + 180
                 
-                if acimut_deltas >= 360:
-                    acimut_deltas -= 360
+                acimut = contra_acimut + angulo_observ
 
-                datos_medidos[i].append(acimut_deltas)
+                if acimut >= 360:
+                    acimut = acimut - 360
+                
+                return acimut
 
-                proyec_punto = proyecciones(acimut_deltas, datos_medidos[i][2])
+            #[CALCULA LAS PROYECCIONES]
+            def proyecciones(acimut, distancia):
+                
+                acimut = math.radians(acimut)
 
-                datos_medidos[i].append(proyec_punto[0])
-                datos_medidos[i].append(proyec_punto[1])
+                valor_proyecciones = []
+                valor_proyecciones.append(math.sin(acimut)*distancia)
+                valor_proyecciones.append(math.cos(acimut)*distancia)
 
-                suma_px += datos_medidos[i][6]
-                suma_py += datos_medidos[i][7]
+                return valor_proyecciones
 
-                i += 1
+            #[SOLICTA NUMERO DE DELTAS Y QUE SE INDIQUE SI LOS ANGULOS SON INTERNOS Y EXTERNOS]
+            def main():
 
-            print()
+                print()
+                print('='*173)
+                print()
+                print('{:^173}'.format('A J U S T E  D E  P O L I G O N A L  P O R  E L  M E T O D O  D E  L A  B R U J U L A'))
+                print()
+                print('='*173)
+                print()
 
-            datos_medidos [1][:] += [0, 0, 0, 0, x_inicio, y_inicio]
+                deltas = int(input('Digite el numero de deltas en la poligonal: '))
+                ang_externos = int(input('¿Angulos externos [1 = SI] [0 = NO]: '))
 
-            #[ALMACENA LAS PROYECCIONES CORREGIDAS EN LA LISTA]
-            i = 0
+                #[AL DEFINIR ANGULOS INTERNOS Y EXTERNOS CALCULA SUMATORIA TEORICA DE ANGULO]
+                if ang_externos == 1:
+                    suma_teorica_ang = (deltas + 2) *180
+                else:
+                    suma_teorica_ang = (deltas - 2) *180
 
-            for dato in datos_medidos:
+                #[SOLICITA LAS COORDENADAS DEL PUNTO DE ARMADA Y DEL PUNTO DE REFERENCIA]
+                x_inicio = float(input('Digite la coordenada X (E) del punto de inicio: '))
+                y_inicio = float(input('DIgite la coordenada Y (N) del punto de inicio: '))
+                x_referencia = float(input('Digite la coordena X (E) del punto de referencia: '))
+                y_referencia = float(input('Digite la coordena Y (N) del punto de referencia: '))
 
-                if i < 2:
+                #[IMPRIME EL ACIMUT DE REFERENCIA]
+                acimut_ref = acimut_linea(x_inicio, y_inicio, x_referencia, y_referencia)
+                print('\n', f'El acimut calculado es: {dec2gms(acimut_ref)}')
+
+                #[IMPRIME LA SUMATORIA TEORICA DE ANGULOS]
+                print(f'La sumatoria teórica de ángulos es: {suma_teorica_ang}°')
+
+                #[ALMACENA LOS DATOS CAPTURADOS EN LISTAS]
+                datos_medidos = []
+                datos_medidos.append (['DELTA','ANG OBSER', 'DIST', 'ANG OBSERV DEC', 'ANG OBSER CORREG', 'AZIMUTH', 'PRY X', 'PRY Y', 'PRY X COREG', 'PRY Y COREG', 'COORD X', 'COORD Y'])
+
+                j = 0
+                sumang = 0.0
+                sumdist = 0.0
+
+                #[SOLICITA LOS DATOS DE CADA DELTA, NOMBRE, ANGULO Y DISTANCIA]
+                # CON NUMERO DE DELTAS Y ANGULOS OBSERVADOS REALIZA LA SUMA DE ANGULOS
+                # CALCULA EL ERROR ANGULAR Y LA CORRECCION ANGULAR
+                # IMPRIME EL ERROR ANGULAR
+                # IMPRIME LA CORRECCION ANGULAR
+                
+                for delta in (range(deltas+1)):
+                    print('='*80)
+
+                    nombre_delta = input(f'Digite el nombre del delta {delta+1}: ')
+                    ang_observado = float(input(f'Digite el angulo observado {delta+1}: '))
+                    distancia = float(input(f'Digite la dista de la linea {delta+1}: '))
+
+                    print('='*80)
+
+                    datos_linea = [nombre_delta, ang_observado, distancia, gms2dec(ang_observado)]
+                    datos_medidos.append(datos_linea.copy())
+
+                    if j != 0:
+                        sumdist = sumdist + distancia
+                        sumang = sumang + datos_linea[3]
+                        j += 1
+                    else:
+                        j += 1
+                
+                error_angular = suma_teorica_ang - sumang
+                correccion_angular = error_angular / deltas
+                
+                print('El error angular es:', error_angular)
+                print('La corrección angular es:', correccion_angular)
+
+                datos_medidos[1].append(datos_medidos[1][3])
+                datos_medidos[1].append(acimut_ref + datos_medidos[1][3])
+
+                #[VARIABLES DE SUMA DE PROYECCIONES]
+                i = 0
+                suma_px = 0.0
+                suma_py = 0.0
+                proyec_punto = []
+
+                #[CALCULA CORRECCIONES A ANGULO, ACIMUT Y PROYECCIONES ]
+                for dato in datos_medidos:
+
+                    if i < 2:
+                        i += 1
+                        continue
+                    
+                    datos_medidos[i].append(datos_medidos[i][3] + correccion_angular)
+
+                    if datos_medidos[i-1][4] >= 180:
+                        acimut_deltas = datos_medidos[i-1][5] - 180 + datos_medidos[i][4]
+                    else:
+                        acimut_deltas = datos_medidos[i-1][5] + 180 + datos_medidos[i][4]
+                    
+                    if acimut_deltas >= 360:
+                        acimut_deltas -= 360
+
+                    datos_medidos[i].append(acimut_deltas)
+
+                    proyec_punto = proyecciones(acimut_deltas, datos_medidos[i][2])
+
+                    datos_medidos[i].append(proyec_punto[0])
+                    datos_medidos[i].append(proyec_punto[1])
+
+                    suma_px += datos_medidos[i][6]
+                    suma_py += datos_medidos[i][7]
+
                     i += 1
-                    continue
 
-                #[CALCULA EL ERROR DE LAS PROYECCIONES]
-                datos_medidos[i].append(datos_medidos[i][6] - (suma_px / sumdist)*datos_medidos[i][2])
-                datos_medidos[i].append(datos_medidos[i][7] - (suma_py / sumdist)*datos_medidos[i][2])
+                print()
 
-                #[CALCULA COORDENADAS]
-                datos_medidos[i].append(datos_medidos[i-1][10] + datos_medidos[i][8])
-                datos_medidos[i].append(datos_medidos[i-1][11] + datos_medidos[i][9])
+                datos_medidos [1][:] += [0, 0, 0, 0, x_inicio, y_inicio]
 
-                i += 1
+                #[ALMACENA LAS PROYECCIONES CORREGIDAS EN LA LISTA]
+                i = 0
 
-            #[IMPRIME DATOS CALCULADOS]
-            print()
+                for dato in datos_medidos:
 
-            print('='*173)
-            print('{:^10}'.format('DELTA'), '{:^8}'.format('ANGULO'), '{:^8}'.format('DISTANC'), '{:^10}'.format('ANGULO'), '{:^10}'.format('AZIMUTH'), '{:^10}'.format('PROYECC'), '{:^10}'.format('PROYECC'), '{:^10}'.format('PROYECC'), '{:^10}'.format('PROYECC'), '{:^11}'.format('COORDEN'), '{:^11}'.format('COORDEN'), sep='\t')
+                    if i < 2:
+                        i += 1
+                        continue
 
-            print('{:^10}'.format(''), '{:^8}'.format('OBSERV'), '{:^8}'.format('(m)'), '{:^10}'.format('CORREGIDO'), '{:^10}'.format(''), '{:^10}'.format('X'), '{:^10}'.format('Y'), '{:^10}'.format('CORR X'), '{:^10}'.format('CORR Y'), '{:^11}'.format('X'), '{:^11}'.format('Y'), sep='\t')
-            print('='*173)
+                    #[CALCULA EL ERROR DE LAS PROYECCIONES]
+                    datos_medidos[i].append(datos_medidos[i][6] - (suma_px / sumdist)*datos_medidos[i][2])
+                    datos_medidos[i].append(datos_medidos[i][7] - (suma_py / sumdist)*datos_medidos[i][2])
 
-            i = 0
+                    #[CALCULA COORDENADAS]
+                    datos_medidos[i].append(datos_medidos[i-1][10] + datos_medidos[i][8])
+                    datos_medidos[i].append(datos_medidos[i-1][11] + datos_medidos[i][9])
 
-            for dato in datos_medidos:
-                if i == 0:
                     i += 1
-                    continue
 
-                print('{:^10}'.format(dato[0]),'{:8.4f}'.format(dato[1]), '{:8.4f}'.format(dato[2]), '{:10}'.format(dec2gms(dato[4])), '{:10}'.format(dec2gms(dato[5])), '{:+010.3f}'.format(dato[6]), '{:+010.3f}'.format(dato[7]), '{:+010.3f}'.format(dato[8]), '{:+010.3f}'.format(dato[9]), '{:11.3f}'.format(dato[10]), '{:11.3f}'.format(dato[11]), sep='\t')
+                #[IMPRIME DATOS CALCULADOS]
+                print()
 
-                i += 1
+                print('='*173)
+                print('{:^10}'.format('DELTA'), '{:^8}'.format('ANGULO'), '{:^8}'.format('DISTANC'), '{:^10}'.format('ANGULO'), '{:^10}'.format('AZIMUTH'), '{:^10}'.format('PROYECC'), '{:^10}'.format('PROYECC'), '{:^10}'.format('PROYECC'), '{:^10}'.format('PROYECC'), '{:^11}'.format('COORDEN'), '{:^11}'.format('COORDEN'), sep='\t')
 
-            print('='*173)
+                print('{:^10}'.format(''), '{:^8}'.format('OBSERV'), '{:^8}'.format('(m)'), '{:^10}'.format('CORREGIDO'), '{:^10}'.format(''), '{:^10}'.format('X'), '{:^10}'.format('Y'), '{:^10}'.format('CORR X'), '{:^10}'.format('CORR Y'), '{:^11}'.format('X'), '{:^11}'.format('Y'), sep='\t')
+                print('='*173)
 
-        if __name__ == '__main__':
-            main()
+                i = 0
+
+                for dato in datos_medidos:
+                    if i == 0:
+                        i += 1
+                        continue
+
+                    print('{:^10}'.format(dato[0]),'{:8.4f}'.format(dato[1]), '{:8.4f}'.format(dato[2]), '{:10}'.format(dec2gms(dato[4])), '{:10}'.format(dec2gms(dato[5])), '{:+010.3f}'.format(dato[6]), '{:+010.3f}'.format(dato[7]), '{:+010.3f}'.format(dato[8]), '{:+010.3f}'.format(dato[9]), '{:11.3f}'.format(dato[10]), '{:11.3f}'.format(dato[11]), sep='\t')
+
+                    i += 1
+
+                print('='*173)
+
+            if __name__ == '__main__':
+                main()
+
         elif poligonal == "3":
             print("Eligio ajuste por método Tránsito")
-        print("Eligio ajuste por método Brujula")
-            #[A J U S T E  D E  P O L I G O N A L  P O R  E L  M E T O D O  D E  L A  B R U J U L A]
+            
+			#[A J U S T E  D E  P O L I G O N A L  P O R  E L  M É T O D O  T R A N S I T O]
 
-        import math
 
-        def gms2dec(angulo):
-            grados = int(angulo)
-            auxiliar = (angulo - grados) * 100
-            minutos = int(auxiliar)
-            segundos = (auxiliar - minutos)*100
+            import math
 
-            angulo_dec = grados + minutos / 60 + segundos / 3600
+            def gms2dec(angulo):
+                grados = int(angulo)
+                auxiliar = (angulo - grados) * 100
+                minutos = int(auxiliar)
+                segundos = (auxiliar - minutos)*100
 
-            return angulo_dec
+                angulo_dec = grados + minutos / 60 + segundos / 3600
 
-        #[ESTE BLOQUE CALCULA EL ACIMUT INICIAL]
+                return angulo_dec
 
-        def acimut_linea(x1, y1, x2, y2):
-            dx = x2 - x1
-            dy = y2 - y1
+            #[ESTE BLOQUE CALCULA EL ACIMUT INICIAL]
 
-            if dy != 0:
-                rumbo = math.degrees(math.atan(dx/dy))
+            def acimut_linea(x1, y1, x2, y2):
+                dx = x2 - x1
+                dy = y2 - y1
 
-                if dx > 0 and dy > 0:
-                    acimut = rumbo
-                elif dx > 0 and dy < 0:
-                    acimut = 180 + rumbo
-                elif dx < 0 and dy < 0:
-                    acimut = 180 + rumbo
-                elif dx < 0 and dy > 0:
-                    acimut = 360 + rumbo
-                elif dx == 0 and dy > 0:
-                    acimut = 0
-                elif dx == 0 and dy > 0:
-                    acimut = 180
-            else:
-                if dx > 0:
-                    acimut = 90
-                elif dx < 0:
-                    acimut = 270
+                if dy != 0:
+                    rumbo = math.degrees(math.atan(dx/dy))
+
+                    if dx > 0 and dy > 0:
+                        acimut = rumbo
+                    elif dx > 0 and dy < 0:
+                        acimut = 180 + rumbo
+                    elif dx < 0 and dy < 0:
+                        acimut = 180 + rumbo
+                    elif dx < 0 and dy > 0:
+                        acimut = 360 + rumbo
+                    elif dx == 0 and dy > 0:
+                        acimut = 0
+                    elif dx == 0 and dy > 0:
+                        acimut = 180
                 else:
-                    acimut = -1
-            
-            return acimut
-
-        #[ESTE BLOQUE CONVIERTE EL ANGULO INGRESADO DE GRADOS DECIMALES A GGMMSS]
-        def dec2gms(angulo_dec):
-            grados = int(angulo_dec)
-            auxiliar = (angulo_dec - grados)*60
-            minutos = int(auxiliar)
-            segundos = round((auxiliar - minutos)*60,0)
-
-            angulo_gms = '{:03d}'.format(grados) + '° ' + '{:02d}'.format(minutos) + "' " + '{:04.1f}'.format(segundos) + '"'
-
-            return angulo_gms
-
-        #[CALCULA EL CONTRA ACIMUT Y RUMBO]
-        def acimut_poligonal(acimut_anterior, angulo_observ):
-            if acimut_anterior >= 180:
-                contra_acimut = acimut_anterior - 180
-            else:
-                contra_acimut = acimut_anterior + 180
-            
-            acimut = contra_acimut + angulo_observ
-
-            if acimut >= 360:
-                acimut = acimut - 360
-            
-            return acimut
-
-        #[CALCULA LAS PROYECCIONES]
-        def proyecciones(acimut, distancia):
-            
-            acimut = math.radians(acimut)
-
-            valor_proyecciones = []
-            valor_proyecciones.append(math.sin(acimut)*distancia)
-            valor_proyecciones.append(math.cos(acimut)*distancia)
-
-            return valor_proyecciones
-
-        #[SOLICTA NUMERO DE DELTAS Y QUE SE INDIQUE SI LOS ANGULOS SON INTERNOS Y EXTERNOS]
-        def main():
-
-            print()
-            print('='*173)
-            print()
-            print('{:^173}'.format('A J U S T E  D E  P O L I G O N A L  P O R  E L  M E T O D O  D E  L A  B R U J U L A'))
-            print()
-            print('='*173)
-            print()
-
-            deltas = int(input('Digite el numero de deltas en la poligonal: '))
-            ang_externos = int(input('¿Angulos externos [1 = SI] [0 = NO]: '))
-
-            #[AL DEFINIR ANGULOS INTERNOS Y EXTERNOS CALCULA SUMATORIA TEORICA DE ANGULO]
-            if ang_externos == 1:
-                suma_teorica_ang = (deltas + 2) *180
-            else:
-                suma_teorica_ang = (deltas - 2) *180
-
-            #[SOLICITA LAS COORDENADAS DEL PUNTO DE ARMADA Y DEL PUNTO DE REFERENCIA]
-            x_inicio = float(input('Digite la coordenada X (E) del punto de inicio: '))
-            y_inicio = float(input('DIgite la coordenada Y (N) del punto de inicio: '))
-            x_referencia = float(input('Digite la coordena X (E) del punto de referencia: '))
-            y_referencia = float(input('Digite la coordena Y (N) del punto de referencia: '))
-
-            #[IMPRIME EL ACIMUT DE REFERENCIA]
-            acimut_ref = acimut_linea(x_inicio, y_inicio, x_referencia, y_referencia)
-            print('\n', f'El acimut calculado es: {dec2gms(acimut_ref)}')
-
-            #[IMPRIME LA SUMATORIA TEORICA DE ANGULOS]
-            print(f'La sumatoria teórica de ángulos es: {suma_teorica_ang}°')
-
-            #[ALMACENA LOS DATOS CAPTURADOS EN LISTAS]
-            datos_medidos = []
-            datos_medidos.append (['DELTA','ANG OBSER', 'DIST', 'ANG OBSERV DEC', 'ANG OBSER CORREG', 'AZIMUTH', 'PRY X', 'PRY Y', 'PRY X COREG', 'PRY Y COREG', 'COORD X', 'COORD Y'])
-
-            j = 0
-            sumang = 0.0
-            sumdist = 0.0
-
-            #[SOLICITA LOS DATOS DE CADA DELTA, NOMBRE, ANGULO Y DISTANCIA]
-            # CON NUMERO DE DELTAS Y ANGULOS OBSERVADOS REALIZA LA SUMA DE ANGULOS
-            # CALCULA EL ERROR ANGULAR Y LA CORRECCION ANGULAR
-            # IMPRIME EL ERROR ANGULAR
-            # IMPRIME LA CORRECCION ANGULAR
-            
-            for delta in (range(deltas+1)):
-                print('='*80)
-
-                nombre_delta = input(f'Digite el nombre del delta {delta+1}: ')
-                ang_observado = float(input(f'Digite el angulo observado {delta+1}: '))
-                distancia = float(input(f'Digite la dista de la linea {delta+1}: '))
-
-                print('='*80)
-
-                datos_linea = [nombre_delta, ang_observado, distancia, gms2dec(ang_observado)]
-                datos_medidos.append(datos_linea.copy())
-
-                if j != 0:
-                    sumdist = sumdist + distancia
-                    sumang = sumang + datos_linea[3]
-                    j += 1
-                else:
-                    j += 1
-            
-            error_angular = suma_teorica_ang - sumang
-            correccion_angular = error_angular / deltas
-            
-            print('El error angular es:', error_angular)
-            print('La corrección angular es:', correccion_angular)
-
-            datos_medidos[1].append(datos_medidos[1][3])
-            datos_medidos[1].append(acimut_ref + datos_medidos[1][3])
-
-            #[VARIABLES DE SUMA DE PROYECCIONES]
-            i = 0
-            suma_px = 0.0
-            suma_py = 0.0
-            proyec_punto = []
-
-            #[CALCULA CORRECCIONES A ANGULO, ACIMUT Y PROYECCIONES ]
-            for dato in datos_medidos:
-
-                if i < 2:
-                    i += 1
-                    continue
+                    if dx > 0:
+                        acimut = 90
+                    elif dx < 0:
+                        acimut = 270
+                    else:
+                        acimut = -1
                 
-                datos_medidos[i].append(datos_medidos[i][3] + correccion_angular)
+                return acimut
 
-                if datos_medidos[i-1][4] >= 180:
-                    acimut_deltas = datos_medidos[i-1][5] - 180 + datos_medidos[i][4]
+            #[ESTE BLOQUE CONVIERTE EL ANGULO INGRESADO DE GRADOS DECIMALES A GGMMSS]
+            def dec2gms(angulo_dec):
+                grados = int(angulo_dec)
+                auxiliar = (angulo_dec - grados)*60
+                minutos = int(auxiliar)
+                segundos = round((auxiliar - minutos)*60,0)
+
+                angulo_gms = '{:03d}'.format(grados) + '° ' + '{:02d}'.format(minutos) + "' " + '{:04.1f}'.format(segundos) + '"'
+
+                return angulo_gms
+
+            #[CALCULA EL CONTRA ACIMUT Y RUMBO]
+            def acimut_poligonal(acimut_anterior, angulo_observ):
+                if acimut_anterior >= 180:
+                    contra_acimut = acimut_anterior - 180
                 else:
-                    acimut_deltas = datos_medidos[i-1][5] + 180 + datos_medidos[i][4]
+                    contra_acimut = acimut_anterior + 180
                 
-                if acimut_deltas >= 360:
-                    acimut_deltas -= 360
+                acimut = contra_acimut + angulo_observ
 
-                datos_medidos[i].append(acimut_deltas)
+                if acimut >= 360:
+                    acimut = acimut - 360
+                
+                return acimut
 
-                proyec_punto = proyecciones(acimut_deltas, datos_medidos[i][2])
+            #[CALCULA LAS PROYECCIONES]
+            def proyecciones(acimut, distancia):
+                
+                acimut = math.radians(acimut)
 
-                datos_medidos[i].append(proyec_punto[0])
-                datos_medidos[i].append(proyec_punto[1])
+                valor_proyecciones = []
+                valor_proyecciones.append(math.sin(acimut)*distancia)
+                valor_proyecciones.append(math.cos(acimut)*distancia)
 
-                suma_px += datos_medidos[i][6]
-                suma_py += datos_medidos[i][7]
+                return valor_proyecciones
 
-                i += 1
+            #[SOLICTA NUMERO DE DELTAS Y QUE SE INDIQUE SI LOS ANGULOS SON INTERNOS Y EXTERNOS]
+            def main():
 
-            print()
+                print()
+                print('='*173)
+                print()
+                print('{:^173}'.format('A J U S T E  D E  P O L I G O N A L  P O R  E L  M E T O D O  T R A N S I T O'))
+                print()
+                print('='*173)
+                print()
 
-            datos_medidos [1][:] += [0, 0, 0, 0, x_inicio, y_inicio]
+                deltas = int(input('Digite el numero de deltas en la poligonal: '))
+                ang_externos = int(input('¿Angulos externos [1 = SI] [0 = NO]: '))
 
-            #[ALMACENA LAS PROYECCIONES CORREGIDAS EN LA LISTA]
-            i = 0
+                #[AL DEFINIR ANGULOS INTERNOS Y EXTERNOS CALCULA SUMATORIA TEORICA DE ANGULO]
+                if ang_externos == 1:
+                    suma_teorica_ang = (deltas + 2) *180
+                else:
+                    suma_teorica_ang = (deltas - 2) *180
 
-            for dato in datos_medidos:
+                #[SOLICITA LAS COORDENADAS DEL PUNTO DE ARMADA Y DEL PUNTO DE REFERENCIA]
+                x_inicio = float(input('Digite la coordenada X (E) del punto de inicio: '))
+                y_inicio = float(input('DIgite la coordenada Y (N) del punto de inicio: '))
+                x_referencia = float(input('Digite la coordena X (E) del punto de referencia: '))
+                y_referencia = float(input('Digite la coordena Y (N) del punto de referencia: '))
 
-                if i < 2:
+                #[IMPRIME EL ACIMUT DE REFERENCIA]
+                acimut_ref = acimut_linea(x_inicio, y_inicio, x_referencia, y_referencia)
+                print('\n', f'El acimut calculado es: {dec2gms(acimut_ref)}')
+
+                #[IMPRIME LA SUMATORIA TEORICA DE ANGULOS]
+                print(f'La sumatoria teórica de ángulos es: {suma_teorica_ang}°')
+
+                #[ALMACENA LOS DATOS CAPTURADOS EN LISTAS]
+                datos_medidos = []
+                datos_medidos.append (['DELTA','ANG OBSER', 'DIST', 'ANG OBSERV DEC', 'ANG OBSER CORREG', 'AZIMUTH', 'PRY X', 'PRY Y', 'PRY X COREG', 'PRY Y COREG', 'COORD X', 'COORD Y'])
+
+                j = 0
+                sumang = 0.0
+                sumdist = 0.0
+
+                #[SOLICITA LOS DATOS DE CADA DELTA, NOMBRE, ANGULO Y DISTANCIA]
+                # CON NUMERO DE DELTAS Y ANGULOS OBSERVADOS REALIZA LA SUMA DE ANGULOS
+                # CALCULA EL ERROR ANGULAR Y LA CORRECCION ANGULAR
+                # IMPRIME EL ERROR ANGULAR
+                # IMPRIME LA CORRECCION ANGULAR
+                
+                for delta in (range(deltas+1)):
+                    print('='*80)
+
+                    nombre_delta = input(f'Digite el nombre del delta {delta+1}: ')
+                    ang_observado = float(input(f'Digite el angulo observado {delta+1}: '))
+                    distancia = float(input(f'Digite la dista de la linea {delta+1}: '))
+
+                    print('='*80)
+
+                    datos_linea = [nombre_delta, ang_observado, distancia, gms2dec(ang_observado)]
+                    datos_medidos.append(datos_linea.copy())
+
+                    if j != 0:
+                        sumdist = sumdist + distancia
+                        sumang = sumang + datos_linea[3]
+                        j += 1
+                    else:
+                        j += 1
+                
+                error_angular = suma_teorica_ang - sumang
+                correccion_angular = error_angular / deltas
+                
+                print('El error angular es:', error_angular)
+                print('La corrección angular es:', correccion_angular)
+
+                datos_medidos[1].append(datos_medidos[1][3])
+                datos_medidos[1].append(acimut_ref + datos_medidos[1][3])
+
+                #[VARIABLES DE SUMA DE PROYECCIONES]
+                i = 0
+                suma_px = 0.0
+                suma_py = 0.0
+                proyec_punto = []
+
+                #[CALCULA CORRECCIONES A ANGULO, ACIMUT Y PROYECCIONES ]
+                for dato in datos_medidos:
+
+                    if i < 2:
+                        i += 1
+                        continue
+                    
+                    datos_medidos[i].append(datos_medidos[i][3] + correccion_angular)
+
+                    if datos_medidos[i-1][4] >= 180:
+                        acimut_deltas = datos_medidos[i-1][5] - 180 + datos_medidos[i][4]
+                    else:
+                        acimut_deltas = datos_medidos[i-1][5] + 180 + datos_medidos[i][4]
+                    
+                    if acimut_deltas >= 360:
+                        acimut_deltas -= 360
+
+                    datos_medidos[i].append(acimut_deltas)
+
+                    proyec_punto = proyecciones(acimut_deltas, datos_medidos[i][2])
+
+                    datos_medidos[i].append(proyec_punto[0])
+                    datos_medidos[i].append(proyec_punto[1])
+
+                    suma_px += datos_medidos[i][6]
+                    suma_py += datos_medidos[i][7]
+
                     i += 1
-                    continue
 
-                #[CALCULA EL ERROR DE LAS PROYECCIONES]
-                datos_medidos[i].append(datos_medidos[i][6] - (suma_px / sumdist)*datos_medidos[i][2])
-                datos_medidos[i].append(datos_medidos[i][7] - (suma_py / sumdist)*datos_medidos[i][2])
+                print()
 
-                #[CALCULA COORDENADAS]
-                datos_medidos[i].append(datos_medidos[i-1][10] + datos_medidos[i][8])
-                datos_medidos[i].append(datos_medidos[i-1][11] + datos_medidos[i][9])
+                datos_medidos [1][:] += [0, 0, 0, 0, x_inicio, y_inicio]
 
-                i += 1
+                #[ALMACENA LAS PROYECCIONES CORREGIDAS EN LA LISTA]
+                i = 0
 
-            #[IMPRIME DATOS CALCULADOS]
-            print()
+                for dato in datos_medidos:
 
-            print('='*173)
-            print('{:^10}'.format('DELTA'), '{:^8}'.format('ANGULO'), '{:^8}'.format('DISTANC'), '{:^10}'.format('ANGULO'), '{:^10}'.format('AZIMUTH'), '{:^10}'.format('PROYECC'), '{:^10}'.format('PROYECC'), '{:^10}'.format('PROYECC'), '{:^10}'.format('PROYECC'), '{:^11}'.format('COORDEN'), '{:^11}'.format('COORDEN'), sep='\t')
+                    if i < 2:
+                        i += 1
+                        continue
 
-            print('{:^10}'.format(''), '{:^8}'.format('OBSERV'), '{:^8}'.format('(m)'), '{:^10}'.format('CORREGIDO'), '{:^10}'.format(''), '{:^10}'.format('X'), '{:^10}'.format('Y'), '{:^10}'.format('CORR X'), '{:^10}'.format('CORR Y'), '{:^11}'.format('X'), '{:^11}'.format('Y'), sep='\t')
-            print('='*173)
+                    #[CALCULA EL ERROR DE LAS PROYECCIONES]
+                    datos_medidos[i].append(datos_medidos[i][6] - (suma_px / sumdist)*datos_medidos[i][2])
+                    datos_medidos[i].append(datos_medidos[i][7] - (suma_py / sumdist)*datos_medidos[i][2])
 
-            i = 0
+                    #[CALCULA COORDENADAS]
+                    datos_medidos[i].append(datos_medidos[i-1][10] + datos_medidos[i][8])
+                    datos_medidos[i].append(datos_medidos[i-1][11] + datos_medidos[i][9])
 
-            for dato in datos_medidos:
-                if i == 0:
                     i += 1
-                    continue
 
-                print('{:^10}'.format(dato[0]),'{:8.4f}'.format(dato[1]), '{:8.4f}'.format(dato[2]), '{:10}'.format(dec2gms(dato[4])), '{:10}'.format(dec2gms(dato[5])), '{:+010.3f}'.format(dato[6]), '{:+010.3f}'.format(dato[7]), '{:+010.3f}'.format(dato[8]), '{:+010.3f}'.format(dato[9]), '{:11.3f}'.format(dato[10]), '{:11.3f}'.format(dato[11]), sep='\t')
+                #[IMPRIME DATOS CALCULADOS]
+                print()
 
-                i += 1
+                print('='*173)
+                print('{:^10}'.format('DELTA'), '{:^8}'.format('ANGULO'), '{:^8}'.format('DISTANC'), '{:^10}'.format('ANGULO'), '{:^10}'.format('AZIMUTH'), '{:^10}'.format('PROYECC'), '{:^10}'.format('PROYECC'), '{:^10}'.format('PROYECC'), '{:^10}'.format('PROYECC'), '{:^11}'.format('COORDEN'), '{:^11}'.format('COORDEN'), sep='\t')
 
-            print('='*173)
+                print('{:^10}'.format(''), '{:^8}'.format('OBSERV'), '{:^8}'.format('(m)'), '{:^10}'.format('CORREGIDO'), '{:^10}'.format(''), '{:^10}'.format('X'), '{:^10}'.format('Y'), '{:^10}'.format('CORR X'), '{:^10}'.format('CORR Y'), '{:^11}'.format('X'), '{:^11}'.format('Y'), sep='\t')
+                print('='*173)
 
-        if __name__ == '__main__':
-            main()
+                i = 0
+
+                for dato in datos_medidos:
+                    if i == 0:
+                        i += 1
+                        continue
+
+                    print('{:^10}'.format(dato[0]),'{:8.4f}'.format(dato[1]), '{:8.4f}'.format(dato[2]), '{:10}'.format(dec2gms(dato[4])), '{:10}'.format(dec2gms(dato[5])), '{:+010.3f}'.format(dato[6]), '{:+010.3f}'.format(dato[7]), '{:+010.3f}'.format(dato[8]), '{:+010.3f}'.format(dato[9]), '{:11.3f}'.format(dato[10]), '{:11.3f}'.format(dato[11]), sep='\t')
+
+                    i += 1
+
+                print('='*173)
+
+            if __name__ == '__main__':
+                main()    
         else:
             print("Opción no válida")
     else:
