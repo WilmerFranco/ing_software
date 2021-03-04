@@ -6,11 +6,11 @@ Proyecto Final carteras de topografia poligonales y nivelacion
 ## Integrantes
  Wilmer Franco Hernandez 20201732014
 
- Jean Peirre Riaño
+ Jean Pierre Riaño 20192732030
 
- Julian Camilo Lopez
+ Julian Camilo Lopez 20192732024
 
- Juliana pachon 
+ Juliana Manuela Pachón  20192732006
  
 
 
